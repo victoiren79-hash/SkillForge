@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SkillForge</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <script>
+    (function(apiKey){
+        (function(p,e,n,d,o){var v,w,x,y,z;o=p[d]=p[d]||{};o._q=o._q||[];
+        v=['initialize','identify','updateOptions','pageLoad','track', 'trackAgent'];for(w=0,x=v.length;w<x;++w)(function(m){
+        o[m]=o[m]||function(){o._q[m===v[0]?'unshift':'push']([m].concat([].slice.call(arguments,0)));};})(v[w]);
+        y=e.createElement(n);y.async=!0;y.src='https://cdn.pendo.io/agent/static/'+apiKey+'/pendo.js';
+        z=e.getElementsByTagName(n)[0];z.parentNode.insertBefore(y,z);})(window,document,'script','pendo');
+    })('ee1f37b1-277b-49d4-87dc-d3c3c69a187e');
+    </script>
     <style>
         :root {
             --bg: #050508;
@@ -199,6 +208,12 @@
     </div>
 
     <script>
+        pendo.initialize({
+            visitor: {
+                id: ''
+            }
+        });
+
         const GROQ_API_KEY = "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";
         const MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 
