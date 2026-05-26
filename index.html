@@ -199,7 +199,7 @@
     </div>
 
     <script>
-        const GROQ_API_KEY = "";
+        // API Key is now securely handled by the server proxy! No need to put it here.
         const MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 
         // ── PERSISTENCE ────────────────────────────────────────────────────────────
@@ -314,9 +314,10 @@
         async function fetchGroq(hobby) {
             const prompt = `You are an expert practical skill educator. A user wants to learn: "${hobby}". Create a detailed, realistic, HANDS-ON roadmap based on PROVEN STRATEGIES and first principles. Output STRICTLY valid JSON. No markdown. Format: [{"level": "Phase 1", "weeks": "Week 1-3", "tasks": [{"title": "Task Title", "desc": "Detailed 2-sentence explanation of the strategy and why it works.", "tag": "Practice", "search": "specific search string for this task ${hobby}", "practice_link": "URL to a practice site if applicable (e.g. LeetCode, Codecademy, Exercism) or null"}]}]. CRITICAL RULES: 1. Timeframes: You MUST use the "weeks" key to represent a sequential roadmap. Start with "Week 1-2" or "Week 1-3". The next phase MUST start exactly after the previous one ended. Example: If Phase 1 is "Week 1-3", Phase 2 MUST be "Week 4-7". NEVER use the word "ongoing". Complex skills like coding should span 20+ weeks total. 2. Provide EXACTLY 5 to 7 phases. 3. Task tags must be EXACTLY "Theory", "Video", or "Practice". Include lots of Practice tags. 4. Make descriptions DETAILED and strategic. 5. Provide practice_link URLs where possible. 6. Be highly specific in search strings.`;
             try {
-                const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                // Calls your local server proxy instead of Groq directly
+                const r = await fetch("/api/generate", {
                     method: "POST",
-                    headers: { "Authorization": `Bearer ${GROQ_API_KEY}`, "Content-Type": "application/json" },
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ model: MODEL, messages: [{ role: "user", content: prompt }], response_format: { type: "json_object" } })
                 });
                 if (!r.ok) return null;
