@@ -296,14 +296,34 @@
             const hobbyName = document.getElementById('hobby-input').value.trim();
             if (!hobbyName) return;
             showView('loading');
+            const generationStart = Date.now();
             const data = await fetchGroq(hobbyName);
-            if (!data) { alert("Failed. Check API Key."); showView('input'); return; }
+            if (!data) {
+                if (typeof pendo !== 'undefined') {
+                    pendo.track("roadmap_generation_failed", {
+                        hobbyName: hobbyName,
+                        errorType: "api_or_parse_failure",
+                        generationDurationMs: Date.now() - generationStart
+                    });
+                }
+                alert("Failed. Check API Key."); showView('input'); return;
+            }
 
             const newHobby = { id: Date.now(), name: hobbyName, data, totalTasks: 0, completedTasks: 0, phases: [] };
             data.forEach(p => { newHobby.totalTasks += p.tasks ? p.tasks.length : 0; });
             hobbies.push(newHobby);
             activeHobbyId = newHobby.id;
             saveToStorage();
+
+            if (typeof pendo !== 'undefined') {
+                pendo.track("roadmap_generated", {
+                    hobbyName: hobbyName,
+                    phaseCount: data.length,
+                    totalTasks: newHobby.totalTasks,
+                    modelUsed: MODEL,
+                    generationDurationMs: Date.now() - generationStart
+                });
+            }
 
             document.getElementById('hobby-input').value = '';
             renderTabs();
@@ -342,6 +362,17 @@
         }
 
         function closeHobby(id) {
+            const deletedHobby = hobbies.find(h => h.id === id);
+            if (deletedHobby && typeof pendo !== 'undefined') {
+                pendo.track("learning_path_deleted", {
+                    hobbyName: deletedHobby.name,
+                    completedTasks: deletedHobby.completedTasks,
+                    totalTasks: deletedHobby.totalTasks,
+                    completionPercent: deletedHobby.totalTasks > 0 ? Math.round(deletedHobby.completedTasks / deletedHobby.totalTasks * 100) : 0,
+                    phaseCount: deletedHobby.data ? deletedHobby.data.length : 0,
+                    remainingPathCount: hobbies.length - 1
+                });
+            }
             hobbies = hobbies.filter(h => h.id !== id);
             if (!hobbies.length) { localStorage.removeItem('skillforge_hobbies'); localStorage.removeItem('skillforge_active'); showView('input'); return; }
             if (activeHobbyId === id) activeHobbyId = hobbies[0].id;
@@ -373,8 +404,8 @@
                     const pLink  = task.practice_link && task.practice_link !== 'null' ? task.practice_link : null;
                     const tagClass = task.tag === 'Practice' ? 'practice' : '';
                     const isDone = task._done ? 'done' : '';
-                    let actionBtns = `<a href="${ytLink}" target="_blank" class="act-btn">▶ YouTube</a><a href="${gLink}" target="_blank" class="act-btn">🔍 Search</a>`;
-                    if (pLink) actionBtns += `<a href="${pLink}" target="_blank" class="act-btn practice-btn">⚡ Practice</a>`;
+                    let actionBtns = `<a href="${ytLink}" target="_blank" class="act-btn" onclick="trackResourceClick('${hobby.name.replace(/'/g, "\\'")}', '${(phase.level || '').replace(/'/g, "\\'")}', ${index}, '${task.title.replace(/'/g, "\\'")}', '${task.tag}', 'YouTube', this.href)">▶ YouTube</a><a href="${gLink}" target="_blank" class="act-btn" onclick="trackResourceClick('${hobby.name.replace(/'/g, "\\'")}', '${(phase.level || '').replace(/'/g, "\\'")}', ${index}, '${task.title.replace(/'/g, "\\'")}', '${task.tag}', 'Search', this.href)">🔍 Search</a>`;
+                    if (pLink) actionBtns += `<a href="${pLink}" target="_blank" class="act-btn practice-btn" onclick="trackResourceClick('${hobby.name.replace(/'/g, "\\'")}', '${(phase.level || '').replace(/'/g, "\\'")}', ${index}, '${task.title.replace(/'/g, "\\'")}', '${task.tag}', 'Practice', this.href)">⚡ Practice</a>`;
                     tasksHtml += `
                         <div class="task-item ${isDone}" onclick="toggleTaskDetails(this,event)">
                             <div class="task-top"><div class="task-title">${task.title} <span class="task-tag ${tagClass}">${task.tag}</span></div></div>
@@ -436,6 +467,20 @@
             item.classList.toggle('extended');
         }
 
+        function trackResourceClick(hobbyName, phaseName, phaseIndex, taskTitle, taskTag, resourceType, resourceUrl) {
+            if (typeof pendo !== 'undefined') {
+                pendo.track("resource_link_clicked", {
+                    hobbyName: hobbyName,
+                    phaseName: phaseName,
+                    phaseIndex: phaseIndex,
+                    taskTitle: taskTitle,
+                    taskTag: taskTag,
+                    resourceType: resourceType,
+                    resourceUrl: resourceUrl
+                });
+            }
+        }
+
         function completeTask(btn, phaseIndex) {
             const taskItem = btn.closest('.task-item');
             if (taskItem.classList.contains('done')) return;
@@ -451,7 +496,36 @@
             hobby.phases[phaseIndex].completedTasks++;
             saveToStorage();
 
+            if (typeof pendo !== 'undefined') {
+                const tagEl = taskItem.querySelector('.task-tag');
+                pendo.track("task_completed", {
+                    hobbyName: hobby.name,
+                    phaseIndex: phaseIndex,
+                    phaseName: hobby.data[phaseIndex].level || '',
+                    taskTitle: title,
+                    taskTag: tagEl ? tagEl.textContent.trim() : '',
+                    phaseTasksCompleted: hobby.phases[phaseIndex].completedTasks,
+                    phaseTotalTasks: hobby.phases[phaseIndex].totalTasks,
+                    overallCompletedTasks: hobby.completedTasks,
+                    overallTotalTasks: hobby.totalTasks,
+                    overallProgressPct: Math.round(hobby.completedTasks / hobby.totalTasks * 100)
+                });
+            }
+
             if (hobby.phases[phaseIndex].completedTasks === hobby.phases[phaseIndex].totalTasks) {
+                if (typeof pendo !== 'undefined') {
+                    pendo.track("phase_completed", {
+                        hobbyName: hobby.name,
+                        phaseName: hobby.data[phaseIndex].level || '',
+                        phaseIndex: phaseIndex,
+                        phaseTaskCount: hobby.phases[phaseIndex].totalTasks,
+                        totalPhases: hobby.phases.length,
+                        isLastPhase: phaseIndex === hobby.phases.length - 1,
+                        nextPhaseName: phaseIndex + 1 < hobby.data.length ? (hobby.data[phaseIndex + 1].level || '') : '',
+                        overallProgressPct: Math.round(hobby.completedTasks / hobby.totalTasks * 100)
+                    });
+                }
+
                 hobby.phases[phaseIndex].element.classList.remove('enabled', 'expanded');
                 hobby.phases[phaseIndex].element.classList.add('complete');
 
@@ -477,7 +551,18 @@
             }
 
             updateHUD();
-            if (hobby.completedTasks === hobby.totalTasks) setTimeout(fireConfetti, 500);
+            if (hobby.completedTasks === hobby.totalTasks) {
+                if (typeof pendo !== 'undefined') {
+                    pendo.track("learning_path_completed", {
+                        hobbyName: hobby.name,
+                        totalTasks: hobby.totalTasks,
+                        phaseCount: hobby.data.length,
+                        totalPaths: hobbies.length,
+                        isFirstCompletion: hobbies.filter(h => h.completedTasks === h.totalTasks).length === 1
+                    });
+                }
+                setTimeout(fireConfetti, 500);
+            }
         }
 
         function updateHUD() {
@@ -513,6 +598,19 @@
             renderTabs();
             renderActivePath();
             showView('path');
+
+            if (typeof pendo !== 'undefined') {
+                const totalCompleted = hobbies.reduce((sum, h) => sum + h.completedTasks, 0);
+                const totalAll = hobbies.reduce((sum, h) => sum + h.totalTasks, 0);
+                const activeH = getActiveHobby();
+                pendo.track("session_restored", {
+                    pathCount: hobbies.length,
+                    totalCompletedTasks: totalCompleted,
+                    totalTasks: totalAll,
+                    overallProgressPct: totalAll > 0 ? Math.round(totalCompleted / totalAll * 100) : 0,
+                    activeHobbyName: activeH ? activeH.name : ''
+                });
+            }
         }
     </script>
 </body>
