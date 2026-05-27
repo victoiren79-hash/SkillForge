@@ -4,11 +4,11 @@ const path = require('path');
 const app = express();
 app.use(express.json());
 
-// FIX: Tell browsers they are allowed to load the Pendo script from cdn.pendo.io
+// FIX: Allow Pendo to fully communicate and send data
 app.use((req, res, next) => {
     res.setHeader(
         'Content-Security-Policy',
-        "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.pendo.io; connect-src 'self' https://api.groq.com https://cdn.pendo.io https://app.pendo.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:;"
+        "default-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.pendo.io https://data.pendo.io https://app.pendo.io https://fonts.googleapis.com https://fonts.gstatic.com; connect-src 'self' https://api.groq.com https://cdn.pendo.io https://data.pendo.io https://app.pendo.io; img-src 'self' data: https://cdn.pendo.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com;"
     );
     next();
 });
