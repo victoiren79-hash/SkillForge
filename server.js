@@ -4,11 +4,13 @@ const path = require('path');
 const app = express();
 app.use(express.json());
 
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+// Serve static files from the current directory (fixes Pendo script loading)
+app.use(express.static(__dirname));
 
+// The secure API proxy
 app.post('/api/generate', async (req, res) => {
     const key = process.env.GROQ_API_KEY;
-    if (!key) return res.status(500).json({ error: "Key missing" });
+    if (!key) return res.status(500).json({ error: "API key missing on server" });
 
     try {
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -18,8 +20,9 @@ app.post('/api/generate', async (req, res) => {
         });
         res.json(await response.json());
     } catch (e) {
-        res.status(500).json({ error: "API fetch failed" });
+        res.status(500).json({ error: "Failed to fetch" });
     }
 });
 
-app.listen(3000, () => console.log('Running on port 3000'));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
