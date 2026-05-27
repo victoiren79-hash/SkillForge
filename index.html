@@ -11,7 +11,8 @@
     v=['initialize','identify','updateOptions','pageLoad','track'];for(w=0;w<v.length;w++)(function(m){
     o[m]=o[m]||function(){o._q.push([m].concat([].slice.call(arguments,0)));};})(v[w]);
     y=e.createElement(n);y.async=1;
-    y.src='https://cdn.pendo.io/agent/static/4f5e2e2e-9e1b-4f7e-8e7e-9e1b4f7e8e7e/pendo.js';
+    y.src='https://cdn.pendo.io/agent/static/PASTE_YOUR_REAL_PENDO_API_KEY_HERE/pendo.js';
+    y.onerror=function(){console.warn('[SkillForge] Pendo agent failed to load. Analytics will not be collected.');};
     z=e.getElementsByTagName(n)[0];z.parentNode.insertBefore(y,z);})(window,document,'script','pendo');
     </script>
 
@@ -194,13 +195,23 @@
     </div>
 
     <script>
+        // Generate or retrieve a persistent anonymous visitor ID
+        function getOrCreateVisitorId() {
+            let visitorId = localStorage.getItem('skillforge_visitor_id');
+            if (!visitorId) {
+                visitorId = 'sf-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('skillforge_visitor_id', visitorId);
+            }
+            return visitorId;
+        }
+
         // Initialize Pendo for Novus tracking
         pendo.initialize({
             visitor: {
-                id: 'VISITOR-UNIQUE-ID'
+                id: getOrCreateVisitorId()
             },
             account: {
-                id: 'ACCOUNT-UNIQUE-ID'
+                id: 'skillforge-public'
             }
         });
 
