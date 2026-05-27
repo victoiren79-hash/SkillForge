@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SkillForge</title>
+    
+    <!-- Pendo Agent Script (Required for Novus to work) -->
+    <script>
+    (function(p,e,n,d,o){var v,w,x,y,z;o[p]=o[p]||function(){(o[p].q=o[p].q||[]).push(arguments)};v=e.createElement(n);w=e.getElementsByTagName(n)[0];v.async=1;v.src=d;w.parentNode.insertBefore(v,w);})(('pendo','document','script','https://cdn.pendo.io/agent/static/4f5e2e2e-9e1b-4f7e-8e7e-9e1b4f7e8e7e/pendo.js',window);
+    </script>
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -66,13 +72,6 @@
         /* The vertical line spans the full height of path-container */
         .travel-line { position: absolute; left: 50%; top: 0; bottom: 0; width: 4px; background: var(--border); transform: translateX(-50%); z-index: 1; border-radius: 2px; }
 
-        /* 
-          THE FIX: The dot is absolute inside path-container.
-          We set its top via JS using card.offsetTop (relative to path-container)
-          + header.offsetTop (relative to card) + header.offsetHeight/2.
-          This is pure layout math — no getBoundingClientRect, no scroll dependency.
-          CSS transition handles smooth movement between phases.
-        */
         .travel-dot {
             position: absolute;
             left: 50%;
@@ -156,17 +155,6 @@
         }
     </style>
 </head>
-    <script>
-(function(p,e,n,d,o){var v,w,x,y,z;o[p]=o[p]||function(){(o[p].q=o[p].q||[]).push(arguments)};v=e.createElement(n);w=e.getElementsByTagName(n)[0];v.async=1;v.src=d;w.parentNode.insertBefore(v,w);})(('pendo','document','script','https://cdn.pendo.io/agent/static/4f5e2e2e-9e1b-4f7e-8e7e-9e1b4f7e8e7e/pendo.js',window);
-pendo.initialize({
-    visitor: {
-        id: 'VISITOR-UNIQUE-ID'
-    },
-    account: {
-        id: 'ACCOUNT-UNIQUE-ID'
-    }
-});
-</script>
 <body>
     <canvas id="particle-canvas"></canvas>
     <canvas id="confetti-canvas"></canvas>
@@ -203,19 +191,27 @@ pendo.initialize({
             <div class="path-container" id="path-container">
                 <div class="travel-line"></div>
                 <div class="travel-dot" id="travel-dot"></div>
-                <!-- Phase cards go inside phases-wrapper so nth-child works correctly -->
                 <div class="phases-wrapper" id="phases-wrapper"></div>
             </div>
         </div>
     </div>
 
     <script>
+        // Initialize Pendo for Novus tracking
+        pendo.initialize({
+            visitor: {
+                id: 'VISITOR-UNIQUE-ID'
+            },
+            account: {
+                id: 'ACCOUNT-UNIQUE-ID'
+            }
+        });
+
         // API Key is now securely handled by the server proxy! No need to put it here.
         const MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 
         // ── PERSISTENCE ────────────────────────────────────────────────────────────
         function saveToStorage() {
-            // Only save the data that matters — not the DOM phase refs
             const toSave = hobbies.map(h => ({ id: h.id, name: h.name, data: h.data, totalTasks: h.totalTasks, completedTasks: h.completedTasks }));
             localStorage.setItem('skillforge_hobbies', JSON.stringify(toSave));
             localStorage.setItem('skillforge_active', activeHobbyId);
@@ -260,20 +256,7 @@ pendo.initialize({
         function goToInput() { showView('input'); }
 
         // ── DOT POSITIONING ────────────────────────────────────────────────────────
-        /*
-          KEY INSIGHT: The dot lives inside .path-container (position:relative).
-          .phases-wrapper is a direct child of .path-container.
-          
-          To get the dot's correct `top` value we need:
-            card.offsetTop          — card top relative to phases-wrapper
-            + phasesWrapper.offsetTop — phases-wrapper top relative to path-container
-            + header.offsetTop      — header top relative to card
-            + header.offsetHeight/2 — vertical midpoint of the header
-
-          This is 100% layout-based and scroll-independent.
-        */
         function getHeaderMidY(cardEl) {
-            // Use the header's midpoint — set --dash-y on the card so ::after matches exactly
             const header = cardEl.querySelector('.phase-header');
             const headerMidInCard = header.offsetTop + header.offsetHeight / 2;
             cardEl.style.setProperty('--dash-y', headerMidInCard + 'px');
@@ -287,7 +270,6 @@ pendo.initialize({
             if (instant) {
                 travelDot.classList.remove('animated');
                 travelDot.style.top = y + 'px';
-                // re-enable animation next frame
                 requestAnimationFrame(() => travelDot.classList.add('animated'));
             } else {
                 travelDot.classList.add('animated');
@@ -550,13 +532,11 @@ pendo.initialize({
                         next.element.classList.remove('locked');
                         next.element.classList.add('enabled', 'expanded');
 
-                        // Give the DOM one paint cycle to render the newly visible card,
-                        // then move dot (animated) and scroll
                         requestAnimationFrame(() => requestAnimationFrame(() => {
-                            moveDotTo(next.element, false); // smooth animated move
+                            moveDotTo(next.element, false);
                             setTimeout(() => {
                                 next.element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            }, 200); // slight delay so scroll and dot move feel coordinated
+                            }, 200);
                         }));
                     }, 500);
                 }
