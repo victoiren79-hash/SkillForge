@@ -5,6 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SkillForge</title>
     
+    <!-- Novus.ai / Pendo Installation Script -->
+    <script>
+    (function(p,e,n,d,o){var v,w,x,y,z;o=p[d]=p[d]||{};o._q=[];
+    v=['initialize','identify','updateOptions','pageLoad','track'];for(w=0;w<v.length;w++)(function(m){
+    o[m]=o[m]||function(){o._q.push([m].concat([].slice.call(arguments,0)));};})(v[w]);
+    y=e.createElement(n);y.async=1;
+    y.src='https://cdn.pendo.io/agent/static/4f5e2e2e-9e1b-4f7e-8e7e-9e1b4f7e8e7e/pendo.js';
+    z=e.getElementsByTagName(n)[0];z.parentNode.insertBefore(y,z);})(window,document,'script','pendo');
+    </script>
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -141,15 +151,6 @@
             .phase-card::after { display: none; }
         }
     </style>
-    <script>
-(function(apiKey){
-    (function(p,e,n,d,o){var v,w,x,y,z;o=p[d]=p[d]||{};o._q=o._q||[];
-    v=['initialize','identify','updateOptions','pageLoad','track', 'trackAgent'];for(w=0,x=v.length;w<x;++w)(function(m){
-    o[m]=o[m]||function(){o._q[m===v[0]?'unshift':'push']([m].concat([].slice.call(arguments,0)));};})(v[w]);
-    y=e.createElement(n);y.async=!0;y.src='https://cdn.pendo.io/agent/static/'+apiKey+'/pendo.js';
-    z=e.getElementsByTagName(n)[0];z.parentNode.insertBefore(y,z);})(window,document,'script','pendo');
-})('ee1f37b1-277b-49d4-87dc-d3c3c69a187e');
-</script>
 </head>
 <body>
     <canvas id="particle-canvas"></canvas>
@@ -194,12 +195,14 @@
 
     <script>
         // Initialize Pendo for Novus tracking
-        let visitorId = localStorage.getItem('pendo_visitor_id');
-        if (!visitorId) {
-          visitorId = 'anon-' + Math.random().toString(36).substr(2, 9);
-          localStorage.setItem('pendo_visitor_id', visitorId);
-        }
-        pendo.initialize({ visitor: { id: visitorId } });
+        pendo.initialize({
+            visitor: {
+                id: 'VISITOR-UNIQUE-ID'
+            },
+            account: {
+                id: 'ACCOUNT-UNIQUE-ID'
+            }
+        });
 
         const MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 
@@ -594,16 +597,6 @@
                 });
             }
         }
-    </script>
-
-    <script>
-    (function(apiKey){
-        (function(p,e,n,d,o){var v,w,x,y,z;o=p[d]=p[d]||{};o._q=o._q||[];
-        v=['initialize','identify','updateOptions','pageLoad','track', 'trackAgent'];for(w=0,x=v.length;w<x;++w)(function(m){
-        o[m]=o[m]||function(){o._q[m===v[0]?'unshift':'push']([m].concat([].slice.call(arguments,0)));};})(v[w]);
-        y=e.createElement(n);y.async=!0;y.src='https://cdn.pendo.io/agent/static/'+apiKey+'/pendo.js';
-        z=e.getElementsByTagName(n)[0];z.parentNode.insertBefore(y,z);})(window,document,'script','pendo');
-    })('ee1f37b1-277b-49d4-87dc-d3c3c69a187e');
     </script>
 </body>
 </html>
