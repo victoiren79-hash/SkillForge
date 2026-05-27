@@ -4,8 +4,7 @@ const path = require('path');
 const app = express();
 app.use(express.json());
 
-// Serve static files from the current directory (fixes Pendo script loading)
-app.use(express.static(__dirname));
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 // The secure API proxy
 app.post('/api/generate', async (req, res) => {
