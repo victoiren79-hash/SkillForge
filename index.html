@@ -55,13 +55,24 @@
         .btn-new-path { background: transparent; border: 1px solid var(--accent); color: var(--accent); padding: 0.3rem 0.75rem; border-radius: 6px; cursor: pointer; font-weight: 700; font-family: 'Inter'; font-size: 0.75rem; transition: 0.2s; white-space: nowrap; }
         .btn-new-path:hover { background: rgba(0, 243, 255, 0.1); }
 
+        /* scroll-area scrolls internally; path-container is positioned relative inside it */
         .scroll-area { flex: 1; overflow-y: auto; padding: 4rem 2rem; padding-bottom: 50px; }
         .scroll-area::-webkit-scrollbar { width: 6px; }
         .scroll-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
+        /* path-container: position relative so the dot and line are anchored to it */
         .path-container { max-width: 900px; margin: 0 auto; position: relative; }
+
+        /* The vertical line spans the full height of path-container */
         .travel-line { position: absolute; left: 50%; top: 0; bottom: 0; width: 4px; background: var(--border); transform: translateX(-50%); z-index: 1; border-radius: 2px; }
 
+        /* 
+          THE FIX: The dot is absolute inside path-container.
+          We set its top via JS using card.offsetTop (relative to path-container)
+          + header.offsetTop (relative to card) + header.offsetHeight/2.
+          This is pure layout math — no getBoundingClientRect, no scroll dependency.
+          CSS transition handles smooth movement between phases.
+        */
         .travel-dot {
             position: absolute;
             left: 50%;
@@ -75,10 +86,14 @@
             display: none;
             top: 0;
         }
+        /* Animated version gets the transition class added by JS */
         .travel-dot.animated {
             transition: top 0.7s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
+        /* Phase cards — nth-child counts from ALL children including travel-line and travel-dot.
+           Those are the 1st and 2nd children, so phase cards start at nth-child(3).
+           We use a wrapper div instead to avoid this issue. */
         .phases-wrapper { position: relative; }
 
         .phase-card { width: 45%; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 4rem; position: relative; z-index: 5; transition: opacity 0.5s, border-color 0.5s, box-shadow 0.5s; opacity: 0.3; pointer-events: none; }
@@ -177,24 +192,19 @@
             <div class="path-container" id="path-container">
                 <div class="travel-line"></div>
                 <div class="travel-dot" id="travel-dot"></div>
+                <!-- Phase cards go inside phases-wrapper so nth-child works correctly -->
                 <div class="phases-wrapper" id="phases-wrapper"></div>
             </div>
         </div>
     </div>
 
     <script>
+        // API Key is now securely handled by the server proxy! No need to put it here.
         const MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
-
-        // Novus.ai Installation
-        (function(p,e,n,d,o){var v,w,x,y,z;o[p]=o[p]||function(){(o[p].q=o[p].q||[]).push(arguments)};v=e.createElement(n);w=e.getElementsByTagName(n)[0];v.async=1;v.src=d;w.parentNode.insertBefore(v,w);y=e.createElement(n);y.async=1;y.src='https://cdn.pendo.io/agent/static/4f5e2e2e-9e1b-4f7e-8e7e-9e1b4f7e8e7e/pendo.js';w.parentNode.insertBefore(y,w)})('pendo',document,'script','https://cdn.pendo.io/agent/static/4f5e2e2e-9e1b-4f7e-8e7e-9e1b4f7e8e7e/pendo.js',window);
-        pendo.initialize({
-            visitor: {
-                id: ''
-            }
-        });
 
         // ── PERSISTENCE ────────────────────────────────────────────────────────────
         function saveToStorage() {
+            // Only save the data that matters — not the DOM phase refs
             const toSave = hobbies.map(h => ({ id: h.id, name: h.name, data: h.data, totalTasks: h.totalTasks, completedTasks: h.completedTasks }));
             localStorage.setItem('skillforge_hobbies', JSON.stringify(toSave));
             localStorage.setItem('skillforge_active', activeHobbyId);
@@ -239,7 +249,20 @@
         function goToInput() { showView('input'); }
 
         // ── DOT POSITIONING ────────────────────────────────────────────────────────
+        /*
+          KEY INSIGHT: The dot lives inside .path-container (position:relative).
+          .phases-wrapper is a direct child of .path-container.
+          
+          To get the dot's correct `top` value we need:
+            card.offsetTop          — card top relative to phases-wrapper
+            + phasesWrapper.offsetTop — phases-wrapper top relative to path-container
+            + header.offsetTop      — header top relative to card
+            + header.offsetHeight/2 — vertical midpoint of the header
+
+          This is 100% layout-based and scroll-independent.
+        */
         function getHeaderMidY(cardEl) {
+            // Use the header's midpoint — set --dash-y on the card so ::after matches exactly
             const header = cardEl.querySelector('.phase-header');
             const headerMidInCard = header.offsetTop + header.offsetHeight / 2;
             cardEl.style.setProperty('--dash-y', headerMidInCard + 'px');
@@ -249,9 +272,11 @@
         function moveDotTo(cardEl, instant) {
             const y = getHeaderMidY(cardEl);
             travelDot.style.display = 'block';
+
             if (instant) {
                 travelDot.classList.remove('animated');
                 travelDot.style.top = y + 'px';
+                // re-enable animation next frame
                 requestAnimationFrame(() => travelDot.classList.add('animated'));
             } else {
                 travelDot.classList.add('animated');
@@ -289,7 +314,7 @@
         async function fetchGroq(hobby) {
             const prompt = `You are an expert practical skill educator. A user wants to learn: "${hobby}". Create a detailed, realistic, HANDS-ON roadmap based on PROVEN STRATEGIES and first principles. Output STRICTLY valid JSON. No markdown. Format: [{"level": "Phase 1", "weeks": "Week 1-3", "tasks": [{"title": "Task Title", "desc": "Detailed 2-sentence explanation of the strategy and why it works.", "tag": "Practice", "search": "specific search string for this task ${hobby}", "practice_link": "URL to a practice site if applicable (e.g. LeetCode, Codecademy, Exercism) or null"}]}]. CRITICAL RULES: 1. Timeframes: You MUST use the "weeks" key to represent a sequential roadmap. Start with "Week 1-2" or "Week 1-3". The next phase MUST start exactly after the previous one ended. Example: If Phase 1 is "Week 1-3", Phase 2 MUST be "Week 4-7". NEVER use the word "ongoing". Complex skills like coding should span 20+ weeks total. 2. Provide EXACTLY 5 to 7 phases. 3. Task tags must be EXACTLY "Theory", "Video", or "Practice". Include lots of Practice tags. 4. Make descriptions DETAILED and strategic. 5. Provide practice_link URLs where possible. 6. Be highly specific in search strings.`;
             try {
-                // Calls the secure server proxy - NO API KEY HERE
+                // Calls your local server proxy instead of Groq directly
                 const r = await fetch("/api/generate", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -379,6 +404,7 @@
                 hobby.phases.push({ element: card, totalTasks: taskCount, completedTasks: 0 });
             });
 
+            // Restore states
             hobby.data.forEach((phase, i) => {
                 const done = phase.tasks.filter(t => t._done).length;
                 hobby.phases[i].completedTasks = done;
@@ -391,6 +417,7 @@
                 }
             });
 
+            // Wait two frames: one for DOM insertion, one for layout computation
             requestAnimationFrame(() => requestAnimationFrame(() => snapDotToActivePhase()));
             updateHUD();
         }
@@ -401,6 +428,7 @@
             const hobby = getActiveHobby();
             hobby.phases.forEach(p => { if (p.element !== card) p.element.classList.remove('expanded'); });
             card.classList.toggle('expanded');
+            // After the expand/collapse CSS transition (400ms), reposition dot and dash
             setTimeout(snapDotToActivePhase, 420);
         }
 
@@ -437,11 +465,13 @@
                         next.element.classList.remove('locked');
                         next.element.classList.add('enabled', 'expanded');
 
+                        // Give the DOM one paint cycle to render the newly visible card,
+                        // then move dot (animated) and scroll
                         requestAnimationFrame(() => requestAnimationFrame(() => {
-                            moveDotTo(next.element, false);
+                            moveDotTo(next.element, false); // smooth animated move
                             setTimeout(() => {
                                 next.element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            }, 200);
+                            }, 200); // slight delay so scroll and dot move feel coordinated
                         }));
                     }, 500);
                 }
