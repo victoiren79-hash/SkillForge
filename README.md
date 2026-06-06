@@ -1,5 +1,5 @@
 # SkillForge 🎯
-### Level up your hobbies. No research required.
+### Stop researching. Start learning.
 
 **Live app → [skillforge-cfcn.onrender.com](https://skillforge-cfcn.onrender.com)**
 
@@ -9,8 +9,6 @@
 
 You want to learn something new. You open YouTube. You open Reddit. An hour later, you've read about *how to learn* but haven't practiced anything — and the motivation is fading.
 
-That's not a you problem. That's a missing-product problem.
-
 Most people don't quit hobbies because they lack discipline. They quit because there's no clear path, and building one from scratch takes time they don't have.
 
 ---
@@ -19,16 +17,20 @@ Most people don't quit hobbies because they lack discipline. They quit because t
 
 Type in any skill or hobby → get a **gamified, structured roadmap** in seconds.
 
-No research. No tab hopping. No blank canvas paralysis. Just a clear, phase-by-phase learning path with resources already baked in.
+No account. No setup. No API key. Just type what you want to learn and go.
 
-### Core Features
+---
+
+## Features
 
 | Feature | What it does |
 |---|---|
 | 🤖 AI-generated curriculums | 5–7 sequential phases with tasks, YouTube links, and search queries |
 | 🔒 Phase gating | Phases unlock sequentially — fundamentals before flourishes |
 | 🎮 Gamified completion | Screen shake + progress animation when you finish a phase |
-| 🌊 Spring-physics dot | Buttery-smooth progress indicator built on `requestAnimationFrame` |
+| 🌊 Spring-physics dot | Buttery-smooth progress indicator built on requestAnimationFrame |
+| ⏱️ Time-aware roadmaps | Tell it how many hours/week you have — it adjusts the timeline |
+| 🔗 Shareable links | Every roadmap gets a public URL you can send to anyone |
 | 💾 Persistent state | LocalStorage saves your roadmap and progress across sessions |
 | 📊 Novus.ai analytics | Real user behavior tracking from day one |
 
@@ -36,7 +38,7 @@ No research. No tab hopping. No blank canvas paralysis. Just a clear, phase-by-p
 
 ## Who It's For
 
-**The busy adult** who knows exactly what hobby they want to learn — guitar, photography, coding, pottery, whatever — but doesn't have time to spend hours researching where to begin.
+The busy adult who knows exactly what hobby they want to learn — guitar, photography, coding, pottery, whatever — but doesn't have time to spend hours researching where to begin.
 
 SkillForge is for the person who just wants to be told: *start here, do this, then this.*
 
@@ -44,24 +46,24 @@ SkillForge is for the person who just wants to be told: *start here, do this, th
 
 ## Tech Stack
 
-- **Frontend**: Vanilla HTML5, CSS3, ES6 JavaScript
-- **AI**: Groq API (`meta-llama/llama-4-scout-17b-16e-instruct`) — structured JSON roadmap generation
-- **Backend**: Node.js / Express (secure API proxy — key never exposed to client)
-- **Hosting**: Render (continuous deployment from GitHub)
-- **Analytics**: Novus.ai
+- **Frontend:** Vanilla HTML5, CSS3, ES6 JavaScript
+- **AI:** Groq API (meta-llama/llama-4-scout-17b-16e-instruct)
+- **Backend:** Node.js / Express — secure API proxy, key never exposed to client
+- **Hosting:** Render, continuous deployment from GitHub
+- **Analytics:** Novus.ai
 
 ---
 
 ## Key Engineering Decisions
 
 **Spring-physics progress dot**
-Standard CSS transitions produced janky stuttering when the UI shifted mid-animation (card expand/collapse). Replaced with a custom `requestAnimationFrame` loop with stiffness + damping applied to velocity. The dot now glides smoothly regardless of DOM changes beneath it.
+Standard CSS transitions produced janky stuttering when the UI shifted mid-animation. Replaced with a custom requestAnimationFrame loop with stiffness + damping applied to velocity. The dot glides smoothly regardless of DOM changes beneath it.
 
 **LLM prompt engineering for sequential structure**
-LLMs default to vague timeframes ("Ongoing", repeated "Week 1–3"). Enforced strict prompt constraints: each phase must reference the end date of the previous one. Forced JSON-only responses to prevent parser-breaking outputs.
+LLMs default to vague timeframes ("Ongoing", repeated "Week 1–3"). Enforced strict prompt constraints: each phase must reference the end date of the previous one, adjusted by the user's available hours per week. Forced JSON-only responses to prevent parser-breaking outputs.
 
 **Secure API proxy**
-Initially, the Groq API key was exposed in frontend JavaScript (classic mistake). Pivoted to an Express.js backend proxy that injects the key from server-side environment variables before forwarding requests.
+The Groq API key lives exclusively in server-side environment variables and is injected at request time. Users never need to provide or manage an API key — they just use the app.
 
 ---
 
@@ -71,7 +73,6 @@ Initially, the Groq API key was exposed in frontend JavaScript (classic mistake)
 git clone https://github.com/YOUR_USERNAME/skillforge
 cd skillforge
 npm install
-# Add your Groq API key to .env
 echo "GROQ_API_KEY=your_key_here" > .env
 npm start
 ```
@@ -82,10 +83,10 @@ App runs at `http://localhost:3000`
 
 ## What's Next
 
-- **Community roadmaps** — Make generated roadmaps public so beginners can follow proven paths from other users
-- **Streaks & accountability** — Daily practice prompts and completion streaks
-- **Embedded resources** — Inline YouTube player and mini code sandboxes inside task cards
-- **Novus-powered insights** — Surface data like "most users take 4 days on Phase 1" to suggest realistic timeline adjustments
+- **Community roadmaps** — publish your roadmap publicly for others to follow
+- **Streaks & accountability** — daily practice prompts and completion streaks
+- **Embedded resources** — inline YouTube player inside task cards
+- **Novus-powered insights** — surface real completion data to adjust timelines
 
 ---
 
