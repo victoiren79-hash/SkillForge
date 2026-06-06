@@ -38,9 +38,22 @@
         .view { display: none; flex-direction: column; min-height: 100vh; position: relative; z-index: 1; }
         .view.active { display: flex; animation: fadeIn 0.5s ease; }
 
-        #input-view { justify-content: center; align-items: center; text-align: center; padding: 2rem; }
-        .logo { font-family: 'Orbitron', sans-serif; font-size: 3.5rem; font-weight: 900; background: linear-gradient(135deg, var(--accent), #fff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.5rem; }
-        .tagline { color: var(--text-dim); font-size: 1.1rem; margin-bottom: 3rem; }
+        /* ── Landing page / input-view ── */
+        #input-view { justify-content: center; align-items: center; text-align: center; padding: 3rem 2rem 4rem; }
+        .landing-inner { width: 100%; max-width: 800px; }
+        .landing-brand { font-family: 'Orbitron', sans-serif; font-size: 0.85rem; font-weight: 700; letter-spacing: 3px; color: var(--accent); text-transform: uppercase; margin-bottom: 2rem; opacity: 0.7; }
+        .hero-headline { font-family: 'Orbitron', sans-serif; font-size: 3rem; font-weight: 900; line-height: 1.15; margin-bottom: 1rem; background: linear-gradient(135deg, var(--accent) 0%, #fff 50%, var(--success) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-size: 200% 200%; animation: gradShift 6s ease infinite; }
+        @keyframes gradShift { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+        .hero-sub { font-family: 'Inter', sans-serif; font-size: 1.15rem; color: var(--text-dim); line-height: 1.6; max-width: 540px; margin: 0 auto 2.5rem; }
+        .landing-form { max-width: 500px; margin: 0 auto 3.5rem; }
+        .feature-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; max-width: 700px; margin: 0 auto 2.5rem; }
+        .feature-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.75rem 1.25rem; text-align: center; transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s; }
+        .feature-card:hover { border-color: var(--accent); box-shadow: 0 0 25px var(--accent-glow); transform: translateY(-4px); }
+        .feature-icon { font-size: 1.75rem; margin-bottom: 0.75rem; display: block; }
+        .feature-title { font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 0.8rem; color: var(--text); margin-bottom: 0.4rem; letter-spacing: 0.5px; }
+        .feature-desc { font-size: 0.75rem; color: var(--text-dim); line-height: 1.5; }
+        .social-proof { font-family: 'Inter', sans-serif; font-size: 0.85rem; color: var(--text-dim); letter-spacing: 0.5px; }
+        .social-proof span { color: var(--success); font-weight: 700; }
         .input-box { width: 100%; max-width: 500px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem; margin: 0 auto 1.5rem; transition: all 0.3s; display: flex; justify-content: center; align-items: center; }
         .input-box:focus-within { border-color: var(--accent); box-shadow: 0 0 30px var(--accent-glow); }
         textarea { width: 100%; background: transparent; border: none; color: var(--text); font-family: 'Orbitron', sans-serif; font-size: 1.1rem; font-weight: 700; text-align: center; outline: none; resize: none; height: 40px; overflow: hidden; line-height: 40px; }
@@ -164,6 +177,10 @@
             .phase-card:nth-child(even) .phase-header { flex-direction: row; }
             .travel-line, .travel-dot { display: none !important; }
             .phase-card::after { display: none; }
+            .hero-headline { font-size: 2rem; }
+            .hero-sub { font-size: 1rem; }
+            .feature-row { grid-template-columns: 1fr; max-width: 340px; }
+            #input-view { padding: 2rem 1.25rem 3rem; }
         }
     </style>
 </head>
@@ -173,16 +190,37 @@
     <div id="flash-overlay"></div>
 
     <div id="input-view" class="view active">
-        <div style="width:100%; max-width:500px; text-align:center;">
-            <div class="logo">SKILLFORGE</div>
-            <div class="tagline">Level up your hobbies.</div>
-            <div class="input-box">
-                <textarea id="hobby-input" placeholder="What do you want to learn?" rows="1"></textarea>
+        <div class="landing-inner">
+            <div class="landing-brand">SkillForge</div>
+            <h1 class="hero-headline">Stop researching.<br>Start learning.</h1>
+            <p class="hero-sub">For the busy adult who knows what they want to learn — but not where to start.</p>
+            <div class="landing-form">
+                <div class="input-box">
+                    <textarea id="hobby-input" placeholder="What do you want to learn?" rows="1"></textarea>
+                </div>
+                <div class="input-box">
+                    <input type="number" id="hours-input" class="hours-input" placeholder="e.g. 5 hours/week" min="1" max="168">
+                </div>
+                <button class="btn-go" onclick="startGeneration()">Generate Path</button>
             </div>
-            <div class="input-box">
-                <input type="number" id="hours-input" class="hours-input" placeholder="e.g. 5 hours/week" min="1" max="168">
+            <div class="feature-row">
+                <div class="feature-card">
+                    <span class="feature-icon">⚡</span>
+                    <div class="feature-title">AI Roadmap</div>
+                    <div class="feature-desc">Personalized learning path generated in seconds, not hours of searching.</div>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-icon">🔓</span>
+                    <div class="feature-title">Gamified Phases</div>
+                    <div class="feature-desc">Unlock the next phase only after completing the current one. Stay motivated.</div>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-icon">🔗</span>
+                    <div class="feature-title">Shareable Paths</div>
+                    <div class="feature-desc">Share your roadmap with a link. Others can follow along instantly.</div>
+                </div>
             </div>
-            <button class="btn-go" onclick="startGeneration()">Generate Path</button>
+            <p class="social-proof"><span>No account.</span> <span>No setup.</span> Just start.</p>
         </div>
     </div>
 
