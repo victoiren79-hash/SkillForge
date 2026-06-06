@@ -66,6 +66,8 @@
         .hud-text { font-family: 'Orbitron', sans-serif; font-size: 0.75rem; color: var(--accent); font-weight: 700; letter-spacing: 1px; }
         .btn-new-path { background: transparent; border: 1px solid var(--accent); color: var(--accent); padding: 0.3rem 0.75rem; border-radius: 6px; cursor: pointer; font-weight: 700; font-family: 'Inter'; font-size: 0.75rem; transition: 0.2s; white-space: nowrap; }
         .btn-new-path:hover { background: rgba(0, 243, 255, 0.1); }
+        .btn-share { background: transparent; border: 1px solid var(--success); color: var(--success); padding: 0.3rem 0.75rem; border-radius: 6px; cursor: pointer; font-weight: 700; font-family: 'Inter'; font-size: 0.75rem; transition: 0.2s; white-space: nowrap; }
+        .btn-share:hover { background: rgba(0, 255, 136, 0.1); }
 
         .scroll-area { flex: 1; overflow-y: auto; padding: 4rem 2rem; padding-bottom: 50px; }
         .scroll-area::-webkit-scrollbar { width: 6px; }
@@ -137,6 +139,15 @@
         .btn-complete:hover { border-color: var(--success); color: var(--success); box-shadow: 0 0 8px var(--success-glow); }
         .task-item.done .btn-complete { background: var(--success); color: #000; border-color: var(--success); pointer-events: none; }
 
+        /* ── Shared view styles ── */
+        #shared-view .shared-title { font-family: 'Orbitron', sans-serif; font-size: 1.8rem; font-weight: 900; background: linear-gradient(135deg, var(--success), #fff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-align: center; margin-bottom: 0.5rem; }
+        #shared-view .shared-subtitle { color: var(--text-dim); font-size: 0.85rem; text-align: center; margin-bottom: 3rem; }
+        #shared-view .phase-card { opacity: 1; pointer-events: auto; border-color: rgba(0, 255, 136, 0.3); box-shadow: 0 5px 20px rgba(0,0,0,0.5); }
+        #shared-view .phase-card.expanded .task-list { max-height: 2000px; padding: 0 1.25rem 1.25rem 1.25rem; }
+        #shared-view .lock-icon { display: none; }
+        #shared-view .phase-header { cursor: default; }
+        #shared-view .complete-row { display: none; }
+
         #confetti-canvas, #flash-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
         #flash-overlay { background: white; opacity: 0; z-index: 99; }
 
@@ -181,6 +192,7 @@
             <div class="hobby-tabs" id="hobby-tabs"></div>
             <div class="top-controls">
                 <span class="hud-text" id="hud-percent">0%</span>
+                <button class="btn-share" onclick="shareCurrentPath()">⬡ Share</button>
                 <button class="btn-new-path" onclick="goToInput()">+ New Path</button>
             </div>
         </div>
@@ -190,6 +202,25 @@
                 <div class="travel-line"></div>
                 <div class="travel-dot" id="travel-dot"></div>
                 <div class="phases-wrapper" id="phases-wrapper"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="shared-view" class="view">
+        <div class="top-bar">
+            <div class="top-logo">SKILLFORGE</div>
+            <div class="top-divider"></div>
+            <div style="flex:1;"></div>
+            <div class="top-controls">
+                <button class="btn-new-path" onclick="goToInput()">+ New Path</button>
+            </div>
+        </div>
+
+        <div class="scroll-area">
+            <div class="path-container">
+                <div class="shared-title" id="shared-hobby-name"></div>
+                <div class="shared-subtitle">Shared Roadmap — Read Only</div>
+                <div class="phases-wrapper" id="shared-phases-wrapper"></div>
             </div>
         </div>
     </div>
@@ -219,7 +250,7 @@
 
         // ── PERSISTENCE ────────────────────────────────────────────────────────────
         function saveToStorage() {
-            const toSave = hobbies.map(h => ({ id: h.id, name: h.name, data: h.data, totalTasks: h.totalTasks, completedTasks: h.completedTasks }));
+            const toSave = hobbies.map(h => ({ id: h.id, name: h.name, data: h.data, totalTasks: h.totalTasks, completedTasks: h.completedTasks, shareId: h.shareId || null }));
             localStorage.setItem('skillforge_hobbies', JSON.stringify(toSave));
             localStorage.setItem('skillforge_active', activeHobbyId);
         }
@@ -309,7 +340,7 @@
                 alert("Failed. Check API Key."); showView('input'); return;
             }
 
-            const newHobby = { id: Date.now(), name: hobbyName, data, totalTasks: 0, completedTasks: 0, phases: [] };
+            const newHobby = { id: Date.now(), name: hobbyName, data, totalTasks: 0, completedTasks: 0, phases: [], shareId: null };
             data.forEach(p => { newHobby.totalTasks += p.tasks ? p.tasks.length : 0; });
             hobbies.push(newHobby);
             activeHobbyId = newHobby.id;
@@ -589,25 +620,172 @@
             cAF = requestAnimationFrame(animConfetti);
         }
 
-        // ── RESTORE SESSION ON LOAD ────────────────────────────────────────────────
-        if (hobbies.length > 0) {
-            renderTabs();
-            renderActivePath();
-            showView('path');
+        // ── SHARE ──────────────────────────────────────────────────────────────────
+        async function shareCurrentPath() {
+            const hobby = getActiveHobby();
+            if (!hobby) return;
 
-            if (typeof pendo !== 'undefined') {
-                const totalCompleted = hobbies.reduce((sum, h) => sum + h.completedTasks, 0);
-                const totalAll = hobbies.reduce((sum, h) => sum + h.totalTasks, 0);
-                const activeH = getActiveHobby();
-                pendo.track("session_restored", {
-                    pathCount: hobbies.length,
-                    totalCompletedTasks: totalCompleted,
-                    totalTasks: totalAll,
-                    overallProgressPct: totalAll > 0 ? Math.round(totalCompleted / totalAll * 100) : 0,
-                    activeHobbyName: activeH ? activeH.name : ''
+            // If already shared, just copy the existing URL
+            if (hobby.shareId) {
+                const url = window.location.origin + '/r/' + hobby.shareId;
+                try {
+                    await navigator.clipboard.writeText(url);
+                    alert('Share link copied!');
+                } catch(e) {
+                    prompt('Copy this link:', url);
+                }
+                return;
+            }
+
+            // Generate a unique share ID
+            const shareId = 'sf-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+
+            try {
+                const r = await fetch('/api/share', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: shareId,
+                        hobby_name: hobby.name,
+                        data: hobby.data
+                    })
                 });
+
+                if (!r.ok) {
+                    const err = await r.json();
+                    alert('Share failed: ' + (err.error || 'Unknown error'));
+                    return;
+                }
+
+                // Save shareId to the hobby object and persist
+                hobby.shareId = shareId;
+                saveToStorage();
+
+                // Track the share event
+                if (typeof pendo !== 'undefined') {
+                    pendo.track("roadmap_shared", {
+                        hobbyName: hobby.name,
+                        shareId: shareId
+                    });
+                }
+
+                const url = window.location.origin + '/r/' + shareId;
+                try {
+                    await navigator.clipboard.writeText(url);
+                    alert('Share link copied!');
+                } catch(e) {
+                    prompt('Copy this link:', url);
+                }
+            } catch(e) {
+                console.error('Share failed:', e);
+                alert('Share failed. Please try again.');
             }
         }
+
+        // ── LOAD SHARED ROADMAP ────────────────────────────────────────────────────
+        async function loadSharedRoadmap(id) {
+            try {
+                const r = await fetch('/api/share/' + id);
+                if (!r.ok) {
+                    alert('Roadmap not found.');
+                    showView('input');
+                    return;
+                }
+
+                const roadmap = await r.json();
+
+                // Track the view event
+                if (typeof pendo !== 'undefined') {
+                    pendo.track("shared_roadmap_viewed", {
+                        hobbyName: roadmap.hobby_name,
+                        shareId: id
+                    });
+                }
+
+                // Render in shared view
+                document.getElementById('shared-hobby-name').textContent = roadmap.hobby_name;
+
+                const wrapper = document.getElementById('shared-phases-wrapper');
+                wrapper.innerHTML = '';
+
+                (roadmap.data || []).forEach((phase) => {
+                    const card = document.createElement('div');
+                    card.className = 'phase-card enabled expanded';
+
+                    const taskCount = phase.tasks ? phase.tasks.length : 0;
+                    const timeDisplay = phase.weeks || phase.time || "Flexible";
+
+                    let tasksHtml = '';
+                    (phase.tasks || []).forEach(task => {
+                        const ytLink = `https://www.youtube.com/results?search_query=${encodeURIComponent(task.search || task.title)}`;
+                        const gLink  = `https://www.google.com/search?q=${encodeURIComponent((task.search || task.title) + ' ' + roadmap.hobby_name)}`;
+                        const pLink  = task.practice_link && task.practice_link !== 'null' ? task.practice_link : null;
+                        const tagClass = task.tag === 'Practice' ? 'practice' : '';
+                        let actionBtns = `<a href="${ytLink}" target="_blank" class="act-btn">▶ YouTube</a><a href="${gLink}" target="_blank" class="act-btn">🔍 Search</a>`;
+                        if (pLink) actionBtns += `<a href="${pLink}" target="_blank" class="act-btn practice-btn">⚡ Practice</a>`;
+                        tasksHtml += `
+                            <div class="task-item" onclick="toggleTaskDetails(this,event)">
+                                <div class="task-top"><div class="task-title">${task.title} <span class="task-tag ${tagClass}">${task.tag}</span></div></div>
+                                <div class="task-details">
+                                    <div class="task-desc">${task.desc}</div>
+                                    <div class="task-actions" onclick="event.stopPropagation()">
+                                        <div class="action-links">${actionBtns}</div>
+                                        <div class="complete-row"><button class="btn-complete">Complete</button></div>
+                                    </div>
+                                </div>
+                            </div>`;
+                    });
+
+                    card.innerHTML = `
+                        <div class="phase-header">
+                            <div class="phase-info">
+                                <h2>${phase.level}</h2>
+                                <div class="phase-meta">⏱ <span class="phase-time">${timeDisplay}</span> • ${taskCount} Nodes</div>
+                            </div>
+                        </div>
+                        <div class="task-list">${tasksHtml}</div>
+                    `;
+
+                    wrapper.appendChild(card);
+                });
+
+                showView('shared');
+            } catch(e) {
+                console.error('Failed to load shared roadmap:', e);
+                alert('Failed to load roadmap.');
+                showView('input');
+            }
+        }
+
+        // ── RESTORE SESSION ON LOAD ────────────────────────────────────────────────
+        (function initApp() {
+            // Check if this is a shared link /r/:id
+            const pathMatch = window.location.pathname.match(/^\/r\/([a-zA-Z0-9_-]+)$/);
+            if (pathMatch) {
+                loadSharedRoadmap(pathMatch[1]);
+                return;
+            }
+
+            // Normal session restore
+            if (hobbies.length > 0) {
+                renderTabs();
+                renderActivePath();
+                showView('path');
+
+                if (typeof pendo !== 'undefined') {
+                    const totalCompleted = hobbies.reduce((sum, h) => sum + h.completedTasks, 0);
+                    const totalAll = hobbies.reduce((sum, h) => sum + h.totalTasks, 0);
+                    const activeH = getActiveHobby();
+                    pendo.track("session_restored", {
+                        pathCount: hobbies.length,
+                        totalCompletedTasks: totalCompleted,
+                        totalTasks: totalAll,
+                        overallProgressPct: totalAll > 0 ? Math.round(totalCompleted / totalAll * 100) : 0,
+                        activeHobbyName: activeH ? activeH.name : ''
+                    });
+                }
+            }
+        })();
     </script>
 </body>
 </html>
