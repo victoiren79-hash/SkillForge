@@ -1,127 +1,92 @@
-# ⚡ SkillForge
+# SkillForge 🎯
+### Level up your hobbies. No research required.
 
-> *Level up your hobbies.*
-
-SkillForge is an AI-powered, gamified learning roadmap generator. Enter any skill or hobby, and it instantly generates a structured, zig-zag timeline of phases and hands-on tasks to take you from zero to proficient. Track your progress with satisfying visual feedback, unlock phases sequentially, and watch your journey unfold.
-
----
-
-## 💡 Inspiration
-
-The hardest part of learning something new isn't the practice—it's figuring out *what* to practice. The internet is an ocean of fragmented tutorials, but it severely lacks structured, actionable paths. SkillForge was built to eliminate "blank canvas paralysis." Instead of endlessly researching curriculums, just tell SkillForge what you want to master, and it maps out the exact steps, complete with YouTube links, search queries, and practice resources.
+**Live app → [skillforge-cfcn.onrender.com](https://skillforge-cfcn.onrender.com)**
 
 ---
 
-## ✨ Key Features
+## The Problem
 
-- **🤖 AI-Generated Roadmaps:** Leverages Groq's ultra-fast LLMs to output structured, sequential learning phases (5-7 phases per skill).
-- **🛤️ Zig-Zag Timeline UI:** A visually distinct, alternating card layout that makes long roadmaps engaging and easy to digest.
-- **🟢 Spring-Physics Travel Dot:** A buttery-smooth progress indicator that glides perfectly along the timeline dashes using custom spring physics—no jarring jumps.
-- **🔒 Sequential Gamification:** Phases unlock one by one. Complete all tasks in a phase to trigger a screen shake, unlock the next stage, and watch the dot glide to its new target.
-- **📑 Multi-Path Tabs:** Learning multiple things at once? The dashboard supports multiple hobbies with easy tab switching.
-- **💾 Persistent Progress:** Your generated roadmaps and task progress are saved to your browser's local storage. Pick up right where you left off.
-- **🎆 Celebration Effects:** Complete your final node and get a full-screen confetti reward.
-- **🌌 Ambient Particle Background:** A subtle, floating particle canvas keeps the UI feeling alive and futuristic.
+You want to learn something new. You open YouTube. You open Reddit. An hour later, you've read about *how to learn* but haven't practiced anything — and the motivation is fading.
+
+That's not a you problem. That's a missing-product problem.
+
+Most people don't quit hobbies because they lack discipline. They quit because there's no clear path, and building one from scratch takes time they don't have.
 
 ---
 
-## 🛠️ Tech Stack
+## What SkillForge Does
 
-| Category | Technology |
-| :--- | :--- |
-| **Frontend** | Vanilla HTML5, CSS3, ES6 JavaScript |
-| **Styling** | CSS Custom Properties, Flexbox, Orbitron + Inter Fonts |
-| **AI Engine** | Groq API (`meta-llama/llama-4-scout-17b-16e-instruct`) |
-| **Backend / Proxy** | Node.js, Express (Secures the API key) |
-| **Hosting** | Render (Web Service) + GitHub (Codebase) |
-| **Animations** | `requestAnimationFrame` Spring Physics, Canvas API |
+Type in any skill or hobby → get a **gamified, structured roadmap** in seconds.
 
----
+No research. No tab hopping. No blank canvas paralysis. Just a clear, phase-by-phase learning path with resources already baked in.
 
-## 🧗 Problems Encountered & Solutions
+### Core Features
 
-### 1. The "Rigid Dot" Misalignment
-**The Problem:** Initially, the progress dot tracked the vertical center of the entire phase card. Because the card expanded and collapsed as tasks were revealed, the center point constantly shifted. This caused the dot to unalign from the horizontal "dash" connector and jump around rigidly.
-**The Solution:** We replaced the CSS `::after` pseudo-element dash with a real DOM element (`.phase-dash`) positioned statically at the header. The JavaScript was rewritten to strictly query the `.phase-dash` coordinates. Now, the dot always aligns perfectly with the dash, regardless of how tall the card gets.
-
-### 2. Choppy Animation During State Changes
-**The Problem:** Using CSS `transition` for the dot's movement resulted in janky animations. If the user expanded a task while the dot was moving, the CSS transition would stutter and snap because it couldn't handle dynamic target changes mid-animation.
-**The Solution:** We stripped out CSS transitions and built a custom `requestAnimationFrame` loop with **Spring Physics**. By applying `stiffness` and `damping` to the dot's velocity, it now smoothly glides to its target, naturally easing out, and dynamically adjusting if the target moves while it's traveling.
-
-### 3. AI Hallucinating Roadmap Structures
-**The Problem:** LLMs love to output "Ongoing" for timeframes or repeat "Week 1-3" for every phase, which breaks the sequential feel of a roadmap. They also frequently wrap JSON in markdown blocks.
-**The Solution:** We engineered strict constraints in the prompt (e.g., *"If Phase 1 is Week 1-3, Phase 2 MUST be Week 4-7. NEVER use ongoing"*). We also forced `response_format: { type: "json_object" }` in the API call to ensure the data structure never broke the UI parser.
-
-### 4. Exposed API Keys in Frontend Code
-**The Problem:** Initially, the Groq API key was hardcoded into the `index.html` file. GitHub's security scanners flagged this, and anyone inspecting the page could steal the key.
-**The Solution:** We built a lightweight Express.js backend proxy (`server.js`). The frontend now calls `/api/generate` on our server, and the server securely injects the API key from an environment variable (`process.env.GROQ_API_KEY`) before forwarding the request to Groq. The app is hosted on Render, which securely stores the key.
+| Feature | What it does |
+|---|---|
+| 🤖 AI-generated curriculums | 5–7 sequential phases with tasks, YouTube links, and search queries |
+| 🔒 Phase gating | Phases unlock sequentially — fundamentals before flourishes |
+| 🎮 Gamified completion | Screen shake + progress animation when you finish a phase |
+| 🌊 Spring-physics dot | Buttery-smooth progress indicator built on `requestAnimationFrame` |
+| 💾 Persistent state | LocalStorage saves your roadmap and progress across sessions |
+| 📊 Novus.ai analytics | Real user behavior tracking from day one |
 
 ---
 
-## 🚀 Getting Started
+## Who It's For
 
-To run SkillForge locally or deploy your own version, follow these steps:
+**The busy adult** who knows exactly what hobby they want to learn — guitar, photography, coding, pottery, whatever — but doesn't have time to spend hours researching where to begin.
 
-### Prerequisites
-- Node.js installed on your machine
-- A Groq API Key (Get one [here](https://console.groq.com/))
-
-### Local Installation
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/yourusername/skillforge.git
-   cd skillforge
-   ```
-
-2. **Install dependencies:**
-   ```bash
-   npm install express
-   ```
-
-3. **Set up your environment variable:**
-   Create a file named `.env` in the root directory and add your API key:
-   ```text
-   GROQ_API_KEY=gsk_your_actual_api_key_here
-   ```
-
-4. **Start the server:**
-   ```bash
-   node server.js
-   ```
-
-5. **Open the app:**
-   Navigate to `http://localhost:3000` in your browser.
-
-### Deploying to Render (Recommended)
-
-1. Push your code to a GitHub repository (ensure `.env` is in your `.gitignore`).
-2. Go to [Render.com](https://render.com/) and sign up with GitHub.
-3. Click **New +** and select **Web Service**.
-4. Connect your GitHub repository.
-5. Configure the following:
-   - **Runtime:** Node
-   - **Build Command:** `npm install express`
-   - **Start Command:** `node server.js`
-6. Scroll down to **Environment Variables** and add:
-   - Key: `GROQ_API_KEY` | Value: `your_actual_api_key`
-7. Click **Create Web Service**. 
+SkillForge is for the person who just wants to be told: *start here, do this, then this.*
 
 ---
 
-## 📁 Project Structure
+## Tech Stack
 
-```text
-skillforge/
-│
-├── index.html        # The single-file frontend application (HTML, CSS, JS)
-├── server.js         # Lightweight Express backend to secure the API key
-├── .gitignore        # Ignores node_modules and .env
-└── README.md         # You are here!
+- **Frontend**: Vanilla HTML5, CSS3, ES6 JavaScript
+- **AI**: Groq API (`meta-llama/llama-4-scout-17b-16e-instruct`) — structured JSON roadmap generation
+- **Backend**: Node.js / Express (secure API proxy — key never exposed to client)
+- **Hosting**: Render (continuous deployment from GitHub)
+- **Analytics**: Novus.ai
+
+---
+
+## Key Engineering Decisions
+
+**Spring-physics progress dot**
+Standard CSS transitions produced janky stuttering when the UI shifted mid-animation (card expand/collapse). Replaced with a custom `requestAnimationFrame` loop with stiffness + damping applied to velocity. The dot now glides smoothly regardless of DOM changes beneath it.
+
+**LLM prompt engineering for sequential structure**
+LLMs default to vague timeframes ("Ongoing", repeated "Week 1–3"). Enforced strict prompt constraints: each phase must reference the end date of the previous one. Forced JSON-only responses to prevent parser-breaking outputs.
+
+**Secure API proxy**
+Initially, the Groq API key was exposed in frontend JavaScript (classic mistake). Pivoted to an Express.js backend proxy that injects the key from server-side environment variables before forwarding requests.
+
+---
+
+## Running Locally
+
+```bash
+git clone https://github.com/YOUR_USERNAME/skillforge
+cd skillforge
+npm install
+# Add your Groq API key to .env
+echo "GROQ_API_KEY=your_key_here" > .env
+npm start
 ```
 
+App runs at `http://localhost:3000`
+
 ---
 
-## 📜 License
+## What's Next
 
-This project is licensed under the MIT License. See the `LICENSE` file for details.
+- **Community roadmaps** — Make generated roadmaps public so beginners can follow proven paths from other users
+- **Streaks & accountability** — Daily practice prompts and completion streaks
+- **Embedded resources** — Inline YouTube player and mini code sandboxes inside task cards
+- **Novus-powered insights** — Surface data like "most users take 4 days on Phase 1" to suggest realistic timeline adjustments
+
+---
+
+*Built for [Mind the Product: World Product Day 2026](https://worldproductday.devpost.com)*
