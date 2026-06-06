@@ -161,7 +161,7 @@
         #shared-view .phase-card { opacity: 1; pointer-events: auto; border-color: rgba(0, 255, 136, 0.3); box-shadow: 0 5px 20px rgba(0,0,0,0.5); }
         #shared-view .phase-card.expanded .task-list { max-height: 2000px; padding: 0 1.25rem 1.25rem 1.25rem; }
         #shared-view .lock-icon { display: none; }
-        #shared-view .phase-header { cursor: default; }
+        #shared-view .phase-header { cursor: pointer; }
         #shared-view .complete-row { display: none; }
 
         #confetti-canvas, #flash-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
@@ -173,10 +173,16 @@
         .shake-effect { animation: shake 0.3s ease-in-out; }
 
         @media (max-width: 768px) {
-            .phase-card, .phase-card:nth-child(even) { width: 100%; margin: 0 auto 3rem auto; text-align: left; }
+            .phase-card, .phase-card:nth-child(even) { width: calc(100% - 2rem); margin-left: 1rem; margin-right: 1rem; text-align: left; }
             .phase-card:nth-child(even) .phase-header { flex-direction: row; }
             .travel-line, .travel-dot { display: none !important; }
             .phase-card::after { display: none; }
+            .top-bar { padding: 0 1rem; gap: 0.75rem; }
+            .hobby-tabs { gap: 0.25rem; }
+            .top-controls { gap: 0.5rem; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+            .btn-share, .btn-new-path { padding: 0.25rem 0.5rem; font-size: 0.7rem; }
+            .hud-text { font-size: 0.65rem; }
+            .scroll-area { padding: 2rem 0; }
             .hero-headline { font-size: 2rem; }
             .hero-sub { font-size: 1rem; }
             .feature-row { grid-template-columns: 1fr; max-width: 340px; }
@@ -541,6 +547,11 @@
             setTimeout(snapDotToActivePhase, 420);
         }
 
+        function toggleSharedExpand(header) {
+            const card = header.closest('.phase-card');
+            card.classList.toggle('expanded');
+        }
+
         function toggleTaskDetails(item, event) {
             if (event.target.closest('.task-actions')) return;
             item.classList.toggle('extended');
@@ -787,7 +798,7 @@
                     });
 
                     card.innerHTML = `
-                        <div class="phase-header">
+                        <div class="phase-header" onclick="toggleSharedExpand(this)">
                             <div class="phase-info">
                                 <h2>${phase.level}</h2>
                                 <div class="phase-meta">⏱ <span class="phase-time">${timeDisplay}</span> • ${taskCount} Nodes</div>
