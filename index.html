@@ -158,11 +158,15 @@
         /* ── Shared view styles ── */
         #shared-view .shared-title { font-family: 'Orbitron', sans-serif; font-size: 1.8rem; font-weight: 900; background: linear-gradient(135deg, var(--success), #fff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-align: center; margin-bottom: 0.5rem; }
         #shared-view .shared-subtitle { color: var(--text-dim); font-size: 0.85rem; text-align: center; margin-bottom: 3rem; }
-        #shared-view .phase-card { opacity: 1; pointer-events: auto; border-color: rgba(0, 255, 136, 0.3); box-shadow: 0 5px 20px rgba(0,0,0,0.5); }
+        #shared-view .phase-card.locked { opacity: 0.3; pointer-events: none; }
+        #shared-view .phase-card.enabled { opacity: 1; pointer-events: auto; border-color: rgba(0, 243, 255, 0.3); box-shadow: 0 5px 20px rgba(0,0,0,0.5); }
+        #shared-view .phase-card.enabled .lock-icon { display: none; }
         #shared-view .phase-card.expanded .task-list { max-height: 2000px; padding: 0 1.25rem 1.25rem 1.25rem; }
-        #shared-view .lock-icon { display: none; }
         #shared-view .phase-header { cursor: pointer; }
+        #shared-view .phase-card.locked .phase-header { cursor: default; }
         #shared-view .complete-row { display: none; }
+        #shared-view .travel-dot { background: var(--success); box-shadow: 0 0 25px var(--success-glow), inset 0 0 5px white; }
+        #shared-view .phase-card.enabled::after { background: var(--success); box-shadow: 0 0 10px var(--success-glow); }
 
         #confetti-canvas, #flash-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
         #flash-overlay { background: white; opacity: 0; z-index: 99; }
@@ -270,6 +274,8 @@
             <div class="path-container">
                 <div class="shared-title" id="shared-hobby-name"></div>
                 <div class="shared-subtitle">Shared Roadmap — Read Only</div>
+                <div class="travel-line"></div>
+                <div class="travel-dot" id="shared-travel-dot"></div>
                 <div class="phases-wrapper" id="shared-phases-wrapper"></div>
             </div>
         </div>
@@ -549,7 +555,25 @@
 
         function toggleSharedExpand(header) {
             const card = header.closest('.phase-card');
+            if (!card.classList.contains('enabled')) return;
+            const wrapper = card.closest('.phases-wrapper');
+            wrapper.querySelectorAll('.phase-card').forEach(c => { if (c !== card) c.classList.remove('expanded'); });
             card.classList.toggle('expanded');
+            snapSharedDotToExpanded();
+        }
+
+        function snapSharedDotToExpanded() {
+            const dot = document.getElementById('shared-travel-dot');
+            if (!dot) return;
+            const wrapper = document.getElementById('shared-phases-wrapper');
+            const expanded = wrapper.querySelector('.phase-card.expanded');
+            if (!expanded) { dot.style.display = 'none'; return; }
+            const header = expanded.querySelector('.phase-header');
+            const headerMidInCard = header.offsetTop + header.offsetHeight / 2;
+            expanded.style.setProperty('--dash-y', headerMidInCard + 'px');
+            const y = wrapper.offsetTop + expanded.offsetTop + headerMidInCard;
+            dot.style.display = 'block';
+            dot.style.top = y + 'px';
         }
 
         function toggleTaskDetails(item, event) {
@@ -769,9 +793,10 @@
                 const wrapper = document.getElementById('shared-phases-wrapper');
                 wrapper.innerHTML = '';
 
-                (roadmap.data || []).forEach((phase) => {
+                (roadmap.data || []).forEach((phase, index) => {
                     const card = document.createElement('div');
-                    card.className = 'phase-card enabled expanded';
+                    card.className = index === 0 ? 'phase-card enabled expanded' : 'phase-card locked';
+                    card.style.marginTop = index === 0 ? '0' : '2rem';
 
                     const taskCount = phase.tasks ? phase.tasks.length : 0;
                     const timeDisplay = phase.weeks || phase.time || "Flexible";
@@ -803,6 +828,7 @@
                                 <h2>${phase.level}</h2>
                                 <div class="phase-meta">⏱ <span class="phase-time">${timeDisplay}</span> • ${taskCount} Nodes</div>
                             </div>
+                            <div class="lock-icon">🔒</div>
                         </div>
                         <div class="task-list">${tasksHtml}</div>
                     `;
@@ -811,6 +837,7 @@
                 });
 
                 showView('shared');
+                requestAnimationFrame(() => requestAnimationFrame(() => snapSharedDotToExpanded()));
             } catch(e) {
                 console.error('Failed to load shared roadmap:', e);
                 alert('Failed to load roadmap.');
