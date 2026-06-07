@@ -155,18 +155,9 @@
         .btn-complete:hover { border-color: var(--success); color: var(--success); box-shadow: 0 0 8px var(--success-glow); }
         .task-item.done .btn-complete { background: var(--success); color: #000; border-color: var(--success); pointer-events: none; }
 
-        /* ── Shared view styles ── */
+        /* ── Shared view styles (legacy — shared roadmaps now use path-view) ── */
         #shared-view .shared-title { font-family: 'Orbitron', sans-serif; font-size: 1.8rem; font-weight: 900; background: linear-gradient(135deg, var(--success), #fff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-align: center; margin-bottom: 0.5rem; }
         #shared-view .shared-subtitle { color: var(--text-dim); font-size: 0.85rem; text-align: center; margin-bottom: 3rem; }
-        #shared-view .phase-card.locked { opacity: 0.3; pointer-events: none; }
-        #shared-view .phase-card.enabled { opacity: 1; pointer-events: auto; border-color: rgba(0, 243, 255, 0.3); box-shadow: 0 5px 20px rgba(0,0,0,0.5); }
-        #shared-view .phase-card.enabled .lock-icon { display: none; }
-        #shared-view .phase-card.expanded .task-list { max-height: 2000px; padding: 0 1.25rem 1.25rem 1.25rem; }
-        #shared-view .phase-header { cursor: pointer; }
-        #shared-view .phase-card.locked .phase-header { cursor: default; }
-        #shared-view .complete-row { display: none; }
-        #shared-view .travel-dot { background: var(--success); box-shadow: 0 0 25px var(--success-glow), inset 0 0 5px white; }
-        #shared-view .phase-card.enabled::after { background: var(--success); box-shadow: 0 0 10px var(--success-glow); }
 
         #confetti-canvas, #flash-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
         #flash-overlay { background: white; opacity: 0; z-index: 99; }
@@ -553,28 +544,7 @@
             setTimeout(snapDotToActivePhase, 420);
         }
 
-        function toggleSharedExpand(header) {
-            const card = header.closest('.phase-card');
-            if (!card.classList.contains('enabled')) return;
-            const wrapper = card.closest('.phases-wrapper');
-            wrapper.querySelectorAll('.phase-card').forEach(c => { if (c !== card) c.classList.remove('expanded'); });
-            card.classList.toggle('expanded');
-            snapSharedDotToExpanded();
-        }
 
-        function snapSharedDotToExpanded() {
-            const dot = document.getElementById('shared-travel-dot');
-            if (!dot) return;
-            const wrapper = document.getElementById('shared-phases-wrapper');
-            const expanded = wrapper.querySelector('.phase-card.expanded');
-            if (!expanded) { dot.style.display = 'none'; return; }
-            const header = expanded.querySelector('.phase-header');
-            const headerMidInCard = header.offsetTop + header.offsetHeight / 2;
-            expanded.style.setProperty('--dash-y', headerMidInCard + 'px');
-            const y = wrapper.offsetTop + expanded.offsetTop + headerMidInCard;
-            dot.style.display = 'block';
-            dot.style.top = y + 'px';
-        }
 
         function toggleTaskDetails(item, event) {
             if (event.target.closest('.task-actions')) return;
@@ -787,57 +757,37 @@
                     });
                 }
 
-                // Render in shared view
-                document.getElementById('shared-hobby-name').textContent = roadmap.hobby_name;
+                // Check if this shared roadmap is already in local hobbies
+                const existingIdx = hobbies.findIndex(h => h.shareId === id);
+                if (existingIdx !== -1) {
+                    // Already have it — just switch to it
+                    activeHobbyId = hobbies[existingIdx].id;
+                    saveToStorage();
+                    renderTabs();
+                    renderActivePath();
+                    showView('path');
+                    return;
+                }
 
-                const wrapper = document.getElementById('shared-phases-wrapper');
-                wrapper.innerHTML = '';
+                // Create a new hobby from the shared data — works exactly like the original
+                const newHobby = {
+                    id: Date.now(),
+                    name: roadmap.hobby_name,
+                    data: roadmap.data,
+                    totalTasks: 0,
+                    completedTasks: 0,
+                    phases: [],
+                    shareId: id
+                };
+                newHobby.data.forEach(p => { newHobby.totalTasks += p.tasks ? p.tasks.length : 0; });
 
-                (roadmap.data || []).forEach((phase, index) => {
-                    const card = document.createElement('div');
-                    card.className = index === 0 ? 'phase-card enabled expanded' : 'phase-card locked';
-                    card.style.marginTop = index === 0 ? '0' : '2rem';
+                hobbies.push(newHobby);
+                activeHobbyId = newHobby.id;
+                saveToStorage();
 
-                    const taskCount = phase.tasks ? phase.tasks.length : 0;
-                    const timeDisplay = phase.weeks || phase.time || "Flexible";
-
-                    let tasksHtml = '';
-                    (phase.tasks || []).forEach(task => {
-                        const ytLink = `https://www.youtube.com/results?search_query=${encodeURIComponent(task.search || task.title)}`;
-                        const gLink  = `https://www.google.com/search?q=${encodeURIComponent((task.search || task.title) + ' ' + roadmap.hobby_name)}`;
-                        const pLink  = task.practice_link && task.practice_link !== 'null' ? task.practice_link : null;
-                        const tagClass = task.tag === 'Practice' ? 'practice' : '';
-                        let actionBtns = `<a href="${ytLink}" target="_blank" class="act-btn">▶ YouTube</a><a href="${gLink}" target="_blank" class="act-btn">🔍 Search</a>`;
-                        if (pLink) actionBtns += `<a href="${pLink}" target="_blank" class="act-btn practice-btn">⚡ Practice</a>`;
-                        tasksHtml += `
-                            <div class="task-item" onclick="toggleTaskDetails(this,event)">
-                                <div class="task-top"><div class="task-title">${task.title} <span class="task-tag ${tagClass}">${task.tag}</span></div></div>
-                                <div class="task-details">
-                                    <div class="task-desc">${task.desc}</div>
-                                    <div class="task-actions" onclick="event.stopPropagation()">
-                                        <div class="action-links">${actionBtns}</div>
-                                        <div class="complete-row"><button class="btn-complete">Complete</button></div>
-                                    </div>
-                                </div>
-                            </div>`;
-                    });
-
-                    card.innerHTML = `
-                        <div class="phase-header" onclick="toggleSharedExpand(this)">
-                            <div class="phase-info">
-                                <h2>${phase.level}</h2>
-                                <div class="phase-meta">⏱ <span class="phase-time">${timeDisplay}</span> • ${taskCount} Nodes</div>
-                            </div>
-                            <div class="lock-icon">🔒</div>
-                        </div>
-                        <div class="task-list">${tasksHtml}</div>
-                    `;
-
-                    wrapper.appendChild(card);
-                });
-
-                showView('shared');
-                requestAnimationFrame(() => requestAnimationFrame(() => snapSharedDotToExpanded()));
+                renderTabs();
+                renderActivePath();
+                showView('path');
             } catch(e) {
                 console.error('Failed to load shared roadmap:', e);
                 alert('Failed to load roadmap.');
