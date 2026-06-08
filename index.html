@@ -153,7 +153,8 @@
         .complete-row { display: flex; justify-content: flex-end; }
         .btn-complete { background: transparent; border: 1px solid var(--border); color: var(--text-dim); padding: 0.5rem 1rem; border-radius: 6px; font-weight: 700; cursor: pointer; font-family: 'Inter'; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; transition: 0.3s; }
         .btn-complete:hover { border-color: var(--success); color: var(--success); box-shadow: 0 0 8px var(--success-glow); }
-        .task-item.done .btn-complete { background: var(--success); color: #000; border-color: var(--success); pointer-events: none; }
+        .task-item.done .btn-complete { background: var(--success); color: #000; border-color: var(--success); cursor: default; }
+        .task-item.done .btn-complete:disabled { opacity: 1; }
 
         /* ── Shared view styles (legacy — shared roadmaps now use path-view) ── */
         #shared-view .shared-title { font-family: 'Orbitron', sans-serif; font-size: 1.8rem; font-weight: 900; background: linear-gradient(135deg, var(--success), #fff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-align: center; margin-bottom: 0.5rem; }
@@ -497,7 +498,7 @@
                                 <div class="task-desc">${task.desc}</div>
                                 <div class="task-actions" onclick="event.stopPropagation()">
                                     <div class="action-links">${actionBtns}</div>
-                                    <div class="complete-row"><button class="btn-complete" onclick="completeTask(this,${index})">Complete</button></div>
+                                    <div class="complete-row" onclick="if(this.closest('.task-item').classList.contains('done')){this.closest('.task-item').classList.toggle('extended');}"><button class="btn-complete" onclick="completeTask(this,${index})" ${isDone ? 'disabled' : ''}>${isDone ? '✓ Completed' : 'Complete'}</button></div>
                                 </div>
                             </div>
                         </div>`;
@@ -570,6 +571,9 @@
             if (taskItem.classList.contains('done')) return;
 
             taskItem.classList.add('done');
+            btn.textContent = '✓ Completed';
+            btn.disabled = true;
+            setTimeout(() => { taskItem.classList.remove('extended'); }, 800);
             const hobby = getActiveHobby();
 
             const title = taskItem.querySelector('.task-title').childNodes[0].textContent.trim();
