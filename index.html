@@ -54,6 +54,13 @@
         .feature-desc { font-size: 0.75rem; color: var(--text-dim); line-height: 1.5; }
         .social-proof { font-family: 'Inter', sans-serif; font-size: 0.85rem; color: var(--text-dim); letter-spacing: 0.5px; }
         .social-proof span { color: var(--success); font-weight: 700; }
+
+        /* ── Community stats bar ── */
+        .stats-row { display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; margin: 0 auto 2.5rem; max-width: 700px; }
+        .stat-pill { background: var(--surface); border: 1px solid var(--border); border-radius: 50px; padding: 0.6rem 1.2rem; display: flex; align-items: center; gap: 0.5rem; }
+        .stat-pill .stat-icon { font-size: 1rem; }
+        .stat-pill .stat-num { font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 1rem; color: var(--accent); }
+        .stat-pill .stat-label { font-family: 'Inter', sans-serif; font-size: 0.7rem; color: var(--text-dim); font-weight: 500; }
         .input-box { width: 100%; max-width: 500px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem; margin: 0 auto 1.5rem; transition: all 0.3s; display: flex; justify-content: center; align-items: center; }
         .input-box:focus-within { border-color: var(--accent); box-shadow: 0 0 30px var(--accent-glow); }
         textarea { width: 100%; background: transparent; border: none; color: var(--text); font-family: 'Orbitron', sans-serif; font-size: 1.1rem; font-weight: 700; text-align: center; outline: none; resize: none; height: 40px; overflow: hidden; line-height: 40px; }
@@ -191,6 +198,10 @@
             .hero-headline { font-size: 2rem; }
             .hero-sub { font-size: 1rem; }
             .feature-row { grid-template-columns: 1fr; max-width: 340px; }
+            .stats-row { gap: 0.5rem; }
+            .stat-pill { padding: 0.45rem 0.85rem; }
+            .stat-pill .stat-num { font-size: 0.85rem; }
+            .stat-pill .stat-label { font-size: 0.6rem; }
             #input-view { padding: 2rem 1.25rem 3rem; }
         }
     </style>
@@ -230,6 +241,11 @@
                     <div class="feature-title">Shareable Paths</div>
                     <div class="feature-desc">Share your roadmap with a link. Others can follow along instantly.</div>
                 </div>
+            </div>
+            <div class="stats-row" id="stats-row">
+                <div class="stat-pill"><span class="stat-icon">🗺️</span><span class="stat-num" id="stat-roadmaps">0</span><span class="stat-label">Roadmaps Created</span></div>
+                <div class="stat-pill"><span class="stat-icon">✅</span><span class="stat-num" id="stat-tasks">0</span><span class="stat-label">Tasks Completed</span></div>
+                <div class="stat-pill"><span class="stat-icon">🎯</span><span class="stat-num" id="stat-skills">0</span><span class="stat-label">Skills Explored</span></div>
             </div>
             <p class="social-proof"><span>No account.</span> <span>No setup.</span> Just start.</p>
         </div>
@@ -327,6 +343,25 @@
         let activeHobbyId = null;
         loadFromStorage();
 
+        // ── COMMUNITY STATS (localStorage per-device) ─────────────────────────────
+        function refreshCommunityStats() {
+            // Roadmaps Created — increment a persistent counter on each generation
+            const roadmapsCount = parseInt(localStorage.getItem('skillforge_roadmaps_created') || '0', 10);
+            const roadmapsEl = document.getElementById('stat-roadmaps');
+            if (roadmapsEl) roadmapsEl.textContent = roadmapsCount;
+
+            // Tasks Completed — sum completedTasks across all stored hobbies
+            const tasksCount = hobbies.reduce((sum, h) => sum + (h.completedTasks || 0), 0);
+            const tasksEl = document.getElementById('stat-tasks');
+            if (tasksEl) tasksEl.textContent = tasksCount;
+
+            // Skills Explored — unique hobby names across all stored hobbies
+            const uniqueSkills = new Set(hobbies.map(h => h.name.toLowerCase().trim()));
+            const skillsEl = document.getElementById('stat-skills');
+            if (skillsEl) skillsEl.textContent = uniqueSkills.size;
+        }
+        refreshCommunityStats();
+
         const pathContainer  = document.getElementById('path-container');
         const phasesWrapper  = document.getElementById('phases-wrapper');
         const hobbyTabs      = document.getElementById('hobby-tabs');
@@ -404,6 +439,11 @@
             hobbies.push(newHobby);
             activeHobbyId = newHobby.id;
             saveToStorage();
+
+            // Increment per-device roadmaps created counter
+            const rc = parseInt(localStorage.getItem('skillforge_roadmaps_created') || '0', 10) + 1;
+            localStorage.setItem('skillforge_roadmaps_created', rc);
+            refreshCommunityStats();
 
             if (typeof pendo !== 'undefined') {
                 pendo.track("roadmap_generated", {
@@ -651,6 +691,7 @@
             hobby.completedTasks++;
             hobby.phases[phaseIndex].completedTasks++;
             saveToStorage();
+            refreshCommunityStats();
 
             if (typeof pendo !== 'undefined') {
                 const tagEl = taskItem.querySelector('.task-tag');
