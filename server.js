@@ -93,17 +93,17 @@ app.get('/r/:id', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// POST /api/coach — AI Skill Coach feedback
+// POST /api/coach — AI Skill Coach feedback (phase completion)
 app.post('/api/coach', async (req, res) => {
     const key = process.env.GROQ_API_KEY;
     if (!key) return res.status(500).json({ error: "API key missing on server" });
 
-    const { skill, phase, task_title, task_desc } = req.body;
-    if (!skill || !task_title) return res.status(400).json({ error: "skill and task_title are required" });
+    const { skill, phase, phase_index, total_phases } = req.body;
+    if (!skill || !phase) return res.status(400).json({ error: "skill and phase are required" });
 
-    const systemPrompt = "You are an encouraging skill coach. The user just completed a learning task. In under 120 words: congratulate them specifically (mention the task), name one common mistake beginners make at this exact step, give one concrete next micro-action they can do in the next 10 minutes. Be warm, specific, never generic. No bullet points. Pure flowing text.";
+    const systemPrompt = "You are an encouraging skill coach. The user just completed a full phase of learning. In under 100 words: celebrate this specific milestone (mention the phase name), name one insight they've probably gained that beginners miss, and fire them up for the next phase. Warm, specific, punchy. No bullet points. No generic praise.";
 
-    const userMessage = `Skill: ${skill}\nPhase: ${phase || 'N/A'}\nTask completed: ${task_title}\nTask description: ${task_desc || 'N/A'}`;
+    const userMessage = `Skill: ${skill}\nPhase completed: ${phase}\nPhase ${phase_index !== undefined ? phase_index + 1 : '?'} of ${total_phases || '?'}`;
 
     try {
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
