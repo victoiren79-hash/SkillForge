@@ -142,7 +142,7 @@
         .task-tag { font-size: 0.55rem; padding: 0.15rem 0.35rem; background: rgba(0, 243, 255, 0.1); color: var(--accent); border-radius: 3px; text-transform: uppercase; font-weight: 800; border: 1px solid rgba(0, 243, 255, 0.2); }
         .task-tag.practice { background: rgba(0, 255, 136, 0.1); color: var(--success); border-color: rgba(0, 255, 136, 0.2); }
         .task-details { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
-        .task-item.extended .task-details { max-height: 300px; }
+        .task-item.extended .task-details { max-height: 600px; }
         .task-desc { font-size: 0.85rem; color: var(--text-dim); line-height: 1.5; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border); margin-bottom: 1rem; }
         .task-actions { display: flex; flex-direction: column; gap: 1rem; margin-top: 0.5rem; }
         .action-links { display: flex; gap: 0.5rem; flex-wrap: wrap; }
@@ -155,6 +155,15 @@
         .btn-complete:hover { border-color: var(--success); color: var(--success); box-shadow: 0 0 8px var(--success-glow); }
         .task-item.done .btn-complete { background: var(--success); color: #000; border-color: var(--success); cursor: default; }
         .task-item.done .btn-complete:disabled { opacity: 1; }
+
+        /* ── AI Skill Coach panel ── */
+        .coach-panel { margin-top: 0.75rem; border-left: 3px solid var(--accent); background: var(--surface); border-radius: 0 8px 8px 0; padding: 0.85rem 1rem; animation: coachSlide 0.3s ease; }
+        @keyframes coachSlide { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .coach-panel .coach-header { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem; font-weight: 700; font-size: 0.8rem; color: var(--accent); }
+        .coach-panel .coach-body { font-size: 0.85rem; color: var(--text-dim); line-height: 1.6; }
+        .coach-panel .coach-spinner { width: 18px; height: 18px; border: 3px solid var(--border); border-top: 3px solid var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0.5rem auto; }
+        .coach-panel .btn-got-it { margin-top: 0.65rem; background: transparent; border: 1px solid var(--accent); color: var(--accent); padding: 0.35rem 0.85rem; border-radius: 6px; font-weight: 700; cursor: pointer; font-family: 'Inter'; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; transition: 0.2s; display: inline-block; }
+        .coach-panel .btn-got-it:hover { background: rgba(0, 243, 255, 0.1); box-shadow: 0 0 8px var(--accent-glow); }
 
         /* ── Shared view styles (legacy — shared roadmaps now use path-view) ── */
         #shared-view .shared-title { font-family: 'Orbitron', sans-serif; font-size: 1.8rem; font-weight: 900; background: linear-gradient(135deg, var(--success), #fff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-align: center; margin-bottom: 0.5rem; }
@@ -545,8 +554,6 @@
             setTimeout(snapDotToActivePhase, 420);
         }
 
-
-
         function toggleTaskDetails(item, event) {
             if (event.target.closest('.task-actions')) return;
             item.classList.toggle('extended');
@@ -566,13 +573,74 @@
             }
         }
 
+        // ── COMPLETE TASK (with AI Skill Coach) ──────────────────────────────────
         function completeTask(btn, phaseIndex) {
             const taskItem = btn.closest('.task-item');
             if (taskItem.classList.contains('done')) return;
 
+            const hobby = getActiveHobby();
+            const title = taskItem.querySelector('.task-title').childNodes[0].textContent.trim();
+            const taskData = hobby.data[phaseIndex].tasks.find(t => t.title === title);
+            const taskDesc = taskData ? taskData.desc : '';
+            const phaseName = hobby.data[phaseIndex].level || '';
+
+            // ── Show coaching panel with spinner ──
+            const actionsEl = taskItem.querySelector('.task-actions');
+            if (actionsEl.querySelector('.coach-panel')) return; // already showing
+
+            const panel = document.createElement('div');
+            panel.className = 'coach-panel';
+            panel.innerHTML = '<div class="coach-header">🧠 Skill Coach</div><div class="coach-spinner"></div>';
+            panel.onclick = e => e.stopPropagation();
+            actionsEl.appendChild(panel);
+
+            // Ensure task details stay open to show the panel
+            if (!taskItem.classList.contains('extended')) taskItem.classList.add('extended');
+
+            // ── Fetch AI coaching feedback ──
+            let coachTimedOut = false;
+            const coachTimeout = setTimeout(() => { coachTimedOut = true; finalizeTask(); }, 8000);
+
+            async function fetchCoach() {
+                try {
+                    const r = await fetch('/api/coach', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ skill: hobby.name, phase: phaseName, task_title: title, task_desc: taskDesc })
+                    });
+                    if (!r.ok || coachTimedOut) { if (!coachTimedOut) finalizeTask(); return; }
+                    const result = await r.json();
+                    const feedback = result.choices?.[0]?.message?.content?.trim();
+                    if (coachTimedOut) return;
+                    clearTimeout(coachTimeout);
+                    if (feedback) {
+                        panel.innerHTML = `<div class="coach-header">🧠 Skill Coach</div><div class="coach-body">${feedback}</div><button class="btn-got-it" onclick="event.stopPropagation();this.closest('.task-item')&&finalizeTask(this.closest('.task-item'),${phaseIndex})">Got it</button>`;
+                    } else {
+                        finalizeTask();
+                    }
+                } catch (e) {
+                    if (!coachTimedOut) finalizeTask();
+                }
+            }
+
+            fetchCoach();
+
+            function finalizeTask(specificItem, specificPhase) {
+                clearTimeout(coachTimeout);
+                const item = specificItem || taskItem;
+                const idx = specificPhase !== undefined ? specificPhase : phaseIndex;
+                const panelEl = item.querySelector('.coach-panel');
+                if (panelEl) panelEl.remove();
+                markTaskDone(item, idx);
+            }
+        }
+
+        function markTaskDone(taskItem, phaseIndex) {
+            if (taskItem.classList.contains('done')) return;
+
             taskItem.classList.add('done');
-            btn.textContent = '✓ Completed';
-            btn.disabled = true;
+            const btn = taskItem.querySelector('.btn-complete');
+            if (btn) { btn.textContent = '✓ Completed'; btn.disabled = true; }
             setTimeout(() => { taskItem.classList.remove('extended'); }, 800);
             const hobby = getActiveHobby();
 
