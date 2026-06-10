@@ -93,5 +93,36 @@ app.get('/r/:id', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// POST /api/coach — AI Skill Coach feedback
+app.post('/api/coach', async (req, res) => {
+    const key = process.env.GROQ_API_KEY;
+    if (!key) return res.status(500).json({ error: "API key missing on server" });
+
+    const { skill, phase, task_title, task_desc } = req.body;
+    if (!skill || !task_title) return res.status(400).json({ error: "skill and task_title are required" });
+
+    const systemPrompt = "You are an encouraging skill coach. The user just completed a learning task. In under 120 words: congratulate them specifically (mention the task), name one common mistake beginners make at this exact step, give one concrete next micro-action they can do in the next 10 minutes. Be warm, specific, never generic. No bullet points. Pure flowing text.";
+
+    const userMessage = `Skill: ${skill}\nPhase: ${phase || 'N/A'}\nTask completed: ${task_title}\nTask description: ${task_desc || 'N/A'}`;
+
+    try {
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+                model: "meta-llama/llama-4-scout-17b-16e-instruct",
+                messages: [
+                    { role: "system", content: systemPrompt },
+                    { role: "user", content: userMessage }
+                ],
+                max_tokens: 200
+            })
+        });
+        res.json(await response.json());
+    } catch (e) {
+        res.status(500).json({ error: "Failed to fetch coach response" });
+    }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
