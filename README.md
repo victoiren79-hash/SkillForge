@@ -19,9 +19,13 @@ Most learning tools are built for students with unlimited time. SkillForge is bu
 
 ## What SkillForge Does
 
+SkillForge is an execution system that forces learning completion.
+
 Type any skill → get a structured, gamified, hands-on roadmap in seconds.
 
 Tell it what you want to learn and how many hours a week you have. It generates a 5–7 phase curriculum with specific tasks, real YouTube links, and Google search queries already picked — so you're never more than one click away from actual practice.
+
+Phases unlock only when you complete the previous one. Finish a phase and the AI Skill Coach appears — personalized coaching for your exact milestone, the insight most beginners miss at that step, and a push toward what's next.
 
 No account. No setup. No API key. Just type and go.
 
@@ -40,6 +44,7 @@ No account. No setup. No API key. Just type and go.
 | 🔗 Shareable links | Every roadmap gets a public URL you can send to anyone |
 | 💾 Persistent state | LocalStorage saves your progress — close the tab, come back tomorrow |
 | 📊 Novus.ai analytics | Real user behavior tracked from day one |
+| 📈 Data-driven fixes | UX issues found and fixed using real Novus analytics — not guesses |
 
 ---
 
@@ -97,6 +102,20 @@ The Groq API key lives exclusively in server-side environment variables. Users n
 
 ---
 
+## Built on Real User Data
+
+Installing analytics was step one. Using it was the work.
+
+Once Novus.ai was correctly wired up, the data surfaced two real problems:
+
+**44% of visitors never submitted a skill.** Session data showed dead clicks on the input fields — no labels, and parts of the input box weren't clickable. Fixed by adding visible labels and making the entire input area respond to clicks.
+
+**Completed tasks were generating rage clicks.** Users repeatedly clicked "Complete" on tasks already marked done — 5 frustration events in 5 seconds. Fixed by disabling the button and auto-collapsing the card 800ms after completion.
+
+Every product decision after week one came from watching what real users did — not from guessing what they might want.
+
+---
+
 ## Running Locally
 
 ```bash
@@ -115,7 +134,7 @@ App runs at `http://localhost:3000`
 ## What's Next
 
 - **Community roadmaps** — publish your path publicly for others to follow
-- **Streaks and accountability** — daily practice prompts and completion streaks  
+- **Streaks and accountability** — daily practice prompts and completion streaks
 - **Novus-powered timeline suggestions** — surface real completion data to adjust schedules based on how actual users progress, not guesses
 - **Embedded resources** — inline YouTube player inside task cards, zero context switching
 
