@@ -237,9 +237,11 @@
             <h1 class="hero-headline">Stop researching.<br>Start learning.</h1>
             <p class="hero-sub">For the busy adult who knows what they want to learn — but not where to start.</p>
             <div class="landing-form">
+                <label for="hobby-input" style="display:block; font-family:'Inter'; font-size:0.8rem; color:var(--text-dim); margin-bottom:0.5rem; text-align:center;">Enter a skill or hobby</label>
                 <div class="input-box">
                     <textarea id="hobby-input" placeholder="What do you want to learn?" rows="1"></textarea>
                 </div>
+                <label for="hours-input" style="display:block; font-family:'Inter'; font-size:0.8rem; color:var(--text-dim); margin-bottom:0.5rem; text-align:center;">Hours per week <span style="opacity:0.6">(optional, defaults to 5)</span></label>
                 <div class="input-box">
                     <input type="number" id="hours-input" class="hours-input" placeholder="e.g. 5 hours/week" min="1" max="168">
                 </div>
@@ -392,6 +394,15 @@
             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); startGeneration(); }
         });
 
+        document.querySelectorAll('.input-box').forEach(box => {
+            box.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    const input = this.querySelector('textarea, input');
+                    if (input) input.focus();
+                }
+            });
+        });
+
         // ── PARTICLES ──────────────────────────────────────────────────────────────
         const pCanvas = document.getElementById('particle-canvas');
         const pCtx = pCanvas.getContext('2d');
@@ -440,6 +451,13 @@
             if (!hobbyName) return;
             const hoursRaw = document.getElementById('hours-input').value;
             const hoursPerWeek = hoursRaw ? parseInt(hoursRaw, 10) : 5;
+            if (typeof pendo !== 'undefined') {
+                pendo.track('skill_input_submitted', {
+                    hobbyName: hobbyName,
+                    hoursPerWeek: hoursPerWeek,
+                    submissionMethod: 'form'
+                });
+            }
             showView('loading');
             const generationStart = Date.now();
             const data = await fetchGroq(hobbyName, hoursPerWeek);
